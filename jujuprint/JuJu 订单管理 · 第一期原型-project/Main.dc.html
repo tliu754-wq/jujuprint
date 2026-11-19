@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>JuJu 订单管理原型</title>
+<script src="./_runtime/react.js"></script>
+<script src="./_runtime/react-dom.js"></script>
+<script src="./_runtime/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F1F1F1}
+a{color:#005BD3}a:hover{color:#004299}
+button{font:inherit;cursor:pointer}
+input,textarea{font:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #005BD3;outline-offset:2px}
+</style>
+</helmet>
+<div style="font-family:'Inter','PingFang SC','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',sans-serif;color:#303030;background:#F1F1F1;min-height:900px;box-sizing:border-box;padding-bottom:48px;">
+
+<header style="background:#FFFFFF;border-bottom:1px solid #E3E3E3;">
+<div style="max-width:1240px;margin:0 auto;padding:12px 24px;box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;">
+<div style="display:flex;flex-direction:column;gap:2px;flex:1 1 240px;">
+<div style="font-size:18px;font-weight:600;">JuJu 订单</div>
+<div style="font-size:12px;color:#616161;">Shopify 后台应用 · 第一期原型 · 全部是示例数据</div>
+</div>
+<nav aria-label="主导航" style="display:flex;flex-wrap:wrap;gap:6px;">
+<button type="button" onClick="{{goOrders}}" aria-current="{{navOrders.current}}" style="{{navOrders.style}}">订单</button>
+<button type="button" onClick="{{goInbox}}" aria-current="{{navInbox.current}}" style="{{navInbox.style}}">待确认<sc-if value="{{hasInbox}}" hint-placeholder-val="{{true}}"><span style="min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#FFC93C;color:#4A3300;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;">{{inboxBadge}}</span></sc-if></button>
+<button type="button" onClick="{{goCustomers}}" aria-current="{{navCustomers.current}}" style="{{navCustomers.style}}">客户</button>
+</nav>
+</div>
+</header>
+
+<main style="max-width:1240px;margin:0 auto;padding:24px;box-sizing:border-box;">
+
+<sc-if value="{{isOrders}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+<h1 style="margin:0;font-size:20px;font-weight:600;">订单</h1>
+<div role="group" aria-label="筛选订单" style="display:flex;flex-wrap:wrap;gap:6px;">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+<button type="button" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="{{f.style}}">{{f.label}} · {{f.count}}</button>
+</sc-for>
+</div>
+</div>
+<div style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;overflow-x:auto;">
+<div style="min-width:1150px;">
+<div style="display:grid;grid-template-columns:84px minmax(150px, 1.4fr) 130px 96px repeat(5, 76px) 92px minmax(110px, 1fr);column-gap:10px;align-items:center;padding:10px 16px;background:#F7F7F7;border-bottom:1px solid #E3E3E3;font-size:12px;font-weight:600;color:#4A4A4A;">
+<span>单号</span><span>客户</span><span>来源</span><span>交货日期</span><span>开单</span><span>付款</span><span>订料</span><span>到货</span><span>制作</span><span>交付</span><span>标记</span>
+</div>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:84px minmax(150px, 1.4fr) 130px 96px repeat(5, 76px) 92px minmax(110px, 1fr);column-gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid #EBEBEB;font-size:14px;">
+<div><button type="button" onClick="{{r.open}}" aria-label="打开订单 {{r.id}}" style="background:none;border:0;padding:0;min-height:32px;color:#005BD3;font-weight:600;font-size:14px;text-align:left;text-decoration:underline;text-underline-offset:3px;">{{r.id}}</button></div>
+<div style="display:flex;flex-direction:column;min-width:0;">
+<span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{r.customer}}</span>
+<span style="font-size:12px;color:#616161;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{r.contact}}</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:4px;">
+<sc-for list="{{r.sources}}" as="s" hint-placeholder-count="2"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;white-space:nowrap;">{{s.ch}}</span></sc-for>
+</div>
+<div>
+<sc-if value="{{r.dueMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">待确认</span></sc-if>
+<sc-if value="{{r.dueKnown}}" hint-placeholder-val="{{true}}"><span style="font-size:13px;">{{r.due}}</span></sc-if>
+</div>
+<sc-for list="{{r.statuses}}" as="st" hint-placeholder-count="6"><div><span style="{{st.style}}">{{st.text}}</span></div></sc-for>
+<div style="display:flex;flex-wrap:wrap;gap:4px;">
+<sc-if value="{{r.exception}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;background:#FDE1E1;color:#9B1C1C;font-size:12px;line-height:18px;white-space:nowrap;">有异常</span></sc-if>
+<sc-if value="{{r.hasPending}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">{{r.pendingCount}} 项待确认</span></sc-if>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{noRows}}" hint-placeholder-val="{{false}}"><div style="padding:24px 16px;color:#616161;font-size:14px;">这个筛选下没有订单。</div></sc-if>
+</div>
+</div>
+<p style="margin:0;font-size:12px;color:#616161;">点单号打开详情。付款状态从 Xero 发票或 Shopify 订单自动同步，其他状态由员工点选。</p>
+</div>
+</sc-if>
+
+<sc-if value="{{isDetail}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+<button type="button" onClick="{{goOrders}}" style="min-height:44px;padding:0 14px;border-radius:8px;border:1px solid #C9C9C9;background:#FFFFFF;color:#303030;font-size:14px;font-weight:500;">← 返回订单</button>
+<h1 style="margin:0;font-size:20px;font-weight:600;">{{d.id}}</h1>
+<sc-if value="{{d.exception}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;background:#FDE1E1;color:#9B1C1C;font-size:12px;line-height:18px;white-space:nowrap;">有异常</span></sc-if>
+<sc-if value="{{d.hasPending}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">{{d.pendingCount}} 项待确认</span></sc-if>
+</div>
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}"><div role="status" style="background:#EAF4FF;border:1px solid #B5D4F4;color:#0C447C;border-radius:10px;padding:10px 14px;font-size:14px;">{{toast}}</div></sc-if>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">
+
+<div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px;">
+
+<sc-if value="{{d.hasPending}}" hint-placeholder-val="{{false}}">
+<section style="background:#FFF8E6;border:1px dashed #B86E00;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;color:#7A4A00;">待人工补齐的字段</h2>
+<div style="display:flex;flex-wrap:wrap;gap:6px;">
+<sc-for list="{{d.pendingItems}}" as="pi" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;background:#FFFFFF;border:1px solid #E8C77A;color:#7A4A00;font-size:12px;line-height:18px;">{{pi.t}}</span></sc-for>
+</div>
+</section>
+</sc-if>
+
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">客户</h2>
+<div style="font-size:16px;font-weight:600;">{{d.custTitle}}</div>
+<div style="font-size:13px;color:#4A4A4A;display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;">
+<sc-if value="{{d.showPerson}}" hint-placeholder-val="{{true}}"><span>{{d.person}}</span></sc-if>
+<sc-if value="{{d.emailKnown}}" hint-placeholder-val="{{true}}"><span>{{d.email}}</span></sc-if>
+<sc-if value="{{d.phoneKnown}}" hint-placeholder-val="{{true}}"><span>{{d.phone}}</span></sc-if>
+<sc-if value="{{d.contactMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">联系方式待确认</span></sc-if>
+</div>
+</section>
+
+<sc-for list="{{d.garments}}" as="g" hint-placeholder-count="1">
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:16px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">{{g.title}}</h2>
+<span style="font-size:12px;color:#616161;">合计 {{g.total}} 件</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;">
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#616161;">款式<sc-if value="{{g.styleMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:0 6px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:11px;line-height:16px;">待确认</span></sc-if></span>
+<input type="text" value="{{g.style}}" onChange="{{g.setStyle}}" placeholder="例如 Gildan 18000" style="{{g.styleInput}}">
+</label>
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#616161;">颜色<sc-if value="{{g.colorMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:0 6px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:11px;line-height:16px;">待确认</span></sc-if></span>
+<input type="text" value="{{g.color}}" onChange="{{g.setColor}}" placeholder="例如 黑色" style="{{g.colorInput}}">
+</label>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#616161;">各尺码数量<sc-if value="{{g.sizesMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:0 6px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:11px;line-height:16px;">待确认</span></sc-if></span>
+<div style="display:flex;flex-wrap:wrap;gap:8px;">
+<sc-for list="{{g.sizes}}" as="sz" hint-placeholder-count="7">
+<label style="display:flex;flex-direction:column;align-items:center;gap:4px;width:64px;">
+<span style="font-size:12px;color:#4A4A4A;">{{sz.label}}</span>
+<input type="number" min="0" value="{{sz.qty}}" onChange="{{sz.set}}" style="width:64px;height:40px;box-sizing:border-box;border:1px solid #C9C9C9;border-radius:8px;text-align:center;font-size:14px;color:#303030;background:#FFFFFF;">
+</label>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;">
+<span style="font-size:12px;color:#616161;">Logo（每个分别记录位置、实际制作尺寸、工艺）</span>
+<sc-for list="{{g.logos}}" as="l" hint-placeholder-count="2">
+<div style="border:1px solid #E3E3E3;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+<span style="font-weight:600;font-size:14px;">Logo {{l.idx}}</span>
+<sc-if value="{{l.anyMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">有字段待确认</span></sc-if>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;">
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="font-size:12px;color:#616161;">位置</span>
+<input type="text" value="{{l.pos}}" onChange="{{l.setPos}}" placeholder="例如 左胸" style="{{l.posInput}}">
+</label>
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="font-size:12px;color:#616161;">宽（mm）</span>
+<input type="number" min="0" value="{{l.w}}" onChange="{{l.setW}}" placeholder="待确认" style="{{l.wInput}}">
+</label>
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="font-size:12px;color:#616161;">高（mm）</span>
+<input type="number" min="0" value="{{l.h}}" onChange="{{l.setH}}" placeholder="待确认" style="{{l.hInput}}">
+</label>
+</div>
+<div role="group" aria-label="Logo {{l.idx}} 工艺" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;">
+<span style="font-size:12px;color:#616161;margin-right:4px;">工艺</span>
+<sc-for list="{{l.procs}}" as="p" hint-placeholder-count="3"><button type="button" onClick="{{p.pick}}" aria-pressed="{{p.pressed}}" style="{{p.style}}">{{p.label}}</button></sc-for>
+<sc-if value="{{l.processMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">待确认</span></sc-if>
+</div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;">
+<span style="font-size:12px;color:#616161;">原档</span>
+<sc-if value="{{l.fileKnown}}" hint-placeholder-val="{{true}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;">{{l.file}}</span></sc-if>
+<sc-if value="{{l.fileMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">还没收到文件</span></sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+<span style="font-size:12px;color:#616161;">确认版效果图</span>
+<sc-if value="{{g.mockupKnown}}" hint-placeholder-val="{{true}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;">{{g.mockup}}</span></sc-if>
+<sc-if value="{{g.mockupMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">还没有确认版</span></sc-if>
+</div>
+<p style="margin:0;font-size:12px;color:#616161;">Logo 原档和效果图存在私有云，正式版这里显示链接和缩略图。</p>
+</section>
+</sc-for>
+
+<sc-for list="{{d.prints}}" as="pr" hint-placeholder-count="0">
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">{{pr.title}}</h2>
+<div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px;">
+<sc-for list="{{pr.fields}}" as="pf" hint-placeholder-count="4">
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#616161;">{{pf.label}}<sc-if value="{{pf.missing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:0 6px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:11px;line-height:16px;">待确认</span></sc-if></span>
+<input type="text" value="{{pf.value}}" onChange="{{pf.set}}" style="{{pf.inputStyle}}">
+</label>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+<span style="font-size:12px;color:#616161;">相关文件</span>
+<sc-if value="{{pr.fileKnown}}" hint-placeholder-val="{{true}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;">{{pr.file}}</span></sc-if>
+<sc-if value="{{pr.fileMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">还没收到文件</span></sc-if>
+</div>
+</section>
+</sc-for>
+
+</div>
+
+<div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:16px;">
+
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+<label style="display:flex;flex-direction:column;gap:8px;">
+<span style="display:flex;align-items:center;gap:8px;"><span style="font-size:15px;font-weight:600;">交货日期</span><sc-if value="{{d.dueMissing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">待确认</span></sc-if></span>
+<input type="date" value="{{d.due}}" onChange="{{d.setDue}}" style="{{d.dueInput}}">
+</label>
+<p style="margin:0;font-size:12px;color:#616161;">可以随时按实际情况改。</p>
+</section>
+
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:16px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">状态</h2>
+<sc-for list="{{d.statusRows}}" as="sr" hint-placeholder-count="6">
+<div role="group" aria-label="{{sr.label}}" style="display:flex;flex-direction:column;gap:6px;">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+<span style="font-size:13px;font-weight:600;">{{sr.label}}</span>
+<span style="{{sr.pillStyle}}">{{sr.value}}</span>
+</div>
+<sc-if value="{{sr.manual}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;flex-wrap:wrap;gap:6px;">
+<sc-for list="{{sr.opts}}" as="op" hint-placeholder-count="3"><button type="button" onClick="{{op.pick}}" aria-pressed="{{op.pressed}}" style="{{op.style}}">{{op.label}}</button></sc-for>
+</div>
+</sc-if>
+<sc-if value="{{sr.auto}}" hint-placeholder-val="{{false}}"><div style="font-size:12px;color:#616161;line-height:1.5;">{{sr.autoNote}}</div></sc-if>
+<sc-if value="{{sr.showInvoiceNo}}" hint-placeholder-val="{{false}}">
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="font-size:12px;color:#616161;">Xero 发票号</span>
+<input type="text" value="{{d.invoiceNo}}" onChange="{{d.setInvoiceNo}}" placeholder="INV-0000" style="width:100%;box-sizing:border-box;min-height:40px;padding:8px 10px;border-radius:8px;font-size:14px;color:#303030;border:1px solid #C9C9C9;background:#FFFFFF;">
+</label>
+</sc-if>
+</div>
+</sc-for>
+</section>
+
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+<label style="display:flex;align-items:center;gap:10px;min-height:44px;">
+<input type="checkbox" checked="{{d.exception}}" onChange="{{d.toggleException}}" style="width:20px;height:20px;margin:0;">
+<span style="font-size:15px;font-weight:600;">有异常</span>
+</label>
+<p style="margin:0;font-size:12px;color:#616161;">异常标记和上面的状态同时显示，不会覆盖。</p>
+<sc-if value="{{d.exception}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:10px;">
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="font-size:12px;color:#616161;">问题</span>
+<textarea value="{{d.issue}}" onChange="{{d.setIssue}}" rows="3" placeholder="例如：订错衣服颜色、印错 Logo 尺寸" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #C9C9C9;font-size:14px;color:#303030;resize:vertical;"></textarea>
+</label>
+<label style="display:flex;flex-direction:column;gap:4px;">
+<span style="font-size:12px;color:#616161;">处理备注</span>
+<textarea value="{{d.note}}" onChange="{{d.setNote}}" rows="3" placeholder="怎么处理的、谁跟进" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #C9C9C9;font-size:14px;color:#303030;resize:vertical;"></textarea>
+</label>
+</div>
+</sc-if>
+</section>
+
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">来源</h2>
+<p style="margin:0;font-size:12px;color:#616161;">同一笔订单来自几个渠道，都关联在这里。</p>
+<sc-for list="{{d.sources}}" as="so" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;white-space:nowrap;">{{so.ch}}</span>
+<span style="color:#3D3D3D;min-width:0;overflow-wrap:anywhere;">{{so.ref}}</span>
+</div>
+</sc-for>
+</section>
+
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isInbox}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:16px;max-width:860px;">
+<h1 style="margin:0;font-size:20px;font-weight:600;">待确认</h1>
+<p style="margin:0;font-size:14px;color:#4A4A4A;line-height:1.6;">能确定的单子会直接入库。只有缺字段、客户对不上、或者分不清是不是同一张单的，才会放到这里等人确认。</p>
+
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">微信聊天 → 订单</h2>
+<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;">半自动</span>
+</div>
+<label style="display:flex;flex-direction:column;gap:6px;">
+<span style="font-size:12px;color:#616161;">把客户的聊天内容粘贴进来（正式版也可以上传截图）</span>
+<textarea value="{{paste}}" onChange="{{setPaste}}" rows="4" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #C9C9C9;font-size:14px;line-height:1.6;color:#303030;resize:vertical;"></textarea>
+</label>
+<sc-if value="{{hasPasteError}}" hint-placeholder-val="{{false}}"><div role="alert" style="font-size:13px;color:#B42318;">{{pasteError}}</div></sc-if>
+<div style="display:flex;flex-wrap:wrap;gap:8px;">
+<button type="button" onClick="{{extract}}" style="min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #1A1A1A;background:#303030;color:#FFFFFF;font-size:14px;font-weight:500;">AI 抽取</button>
+</div>
+<sc-if value="{{extracted}}" hint-placeholder-val="{{false}}">
+<div style="border:1px solid #E3E3E3;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;background:#FAFAFA;">
+<div style="font-size:12px;color:#616161;">原型演示：不管粘贴什么，这里都显示同一个预设结果。正式版由 AI 按实际内容抽取。</div>
+<sc-for list="{{exRows}}" as="x" hint-placeholder-count="8">
+<div style="display:grid;grid-template-columns:88px minmax(0, 1fr);gap:8px;align-items:start;font-size:14px;">
+<span style="color:#616161;font-size:13px;">{{x.label}}</span>
+<span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;"><span>{{x.value}}</span><sc-if value="{{x.missing}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;border:1px dashed #B86E00;background:#FFF8E6;color:#7A4A00;font-size:12px;line-height:18px;white-space:nowrap;">待确认</span></sc-if></span>
+</div>
+</sc-for>
+<div style="font-size:13px;color:#7A4A00;background:#FFF8E6;border-radius:8px;padding:8px 10px;line-height:1.5;">客户匹配：聊天里没有邮箱和电话，找不到已有客户，会新建客户「Ironbark Fitness」，联系方式待补。</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;">
+<button type="button" onClick="{{confirmPaste}}" style="min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #1A1A1A;background:#303030;color:#FFFFFF;font-size:14px;font-weight:500;">确认建单</button>
+<button type="button" onClick="{{cancelExtract}}" style="min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #C9C9C9;background:#FFFFFF;color:#303030;font-size:14px;font-weight:500;">取消</button>
+</div>
+</div>
+</sc-if>
+</section>
+
+<h2 style="margin:8px 0 0;font-size:16px;font-weight:600;">其他渠道（{{inboxCount}}）</h2>
+<sc-if value="{{inboxEmpty}}" hint-placeholder-val="{{false}}"><div style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;font-size:14px;color:#616161;">都处理完了。</div></sc-if>
+<sc-for list="{{inboxCards}}" as="m" hint-placeholder-count="3">
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
+<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:6px;border:1px solid #D4D4D4;background:#FAFAFA;font-size:12px;line-height:18px;color:#3D3D3D;">{{m.ch}}</span>
+<span style="font-size:12px;color:#616161;">{{m.time}} · {{m.from}}</span>
+</div>
+<div style="font-size:15px;font-weight:600;">{{m.title}}</div>
+<div style="font-size:14px;color:#3D3D3D;line-height:1.6;">{{m.summary}}</div>
+<div style="{{m.matchStyle}}">{{m.match}}</div>
+<div style="font-size:14px;font-weight:500;">{{m.question}}</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px;">
+<sc-for list="{{m.actions}}" as="act" hint-placeholder-count="3"><button type="button" onClick="{{act.run}}" style="{{act.style}}">{{act.label}}</button></sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isCustomers}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+<h1 style="margin:0;font-size:20px;font-weight:600;">客户</h1>
+<a href="{{csvUrl}}" download="juju-customers.csv" onClick="{{showCsv}}" style="min-height:44px;padding:0 16px;border-radius:8px;border:1px solid #1A1A1A;background:#303030;color:#FFFFFF;font-size:14px;font-weight:500;display:inline-flex;align-items:center;text-decoration:none;box-sizing:border-box;">导出客户</a>
+</div>
+<p style="margin:0;font-size:14px;color:#4A4A4A;line-height:1.6;">先按邮箱匹配，再按电话。有公司名就显示公司名，没有就显示个人姓名。导出的 CSV 包含公司名、姓名、邮箱和电话。</p>
+<div style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;overflow-x:auto;">
+<div style="min-width:760px;">
+<div style="display:grid;grid-template-columns:minmax(160px, 1.4fr) minmax(100px, 1fr) minmax(200px, 1.6fr) minmax(140px, 1.1fr) 64px;column-gap:12px;padding:10px 16px;background:#F7F7F7;border-bottom:1px solid #E3E3E3;font-size:12px;font-weight:600;color:#4A4A4A;">
+<span>公司名</span><span>姓名</span><span>邮箱</span><span>电话</span><span>订单</span>
+</div>
+<sc-for list="{{custRows}}" as="cr" hint-placeholder-count="5">
+<div style="display:grid;grid-template-columns:minmax(160px, 1.4fr) minmax(100px, 1fr) minmax(200px, 1.6fr) minmax(140px, 1.1fr) 64px;column-gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid #EBEBEB;font-size:14px;">
+<span style="font-weight:500;">{{cr.company}}</span>
+<span>{{cr.name}}</span>
+<span style="overflow-wrap:anywhere;">{{cr.email}}</span>
+<span>{{cr.phone}}</span>
+<span>{{cr.count}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+<sc-if value="{{csvOpen}}" hint-placeholder-val="{{false}}">
+<section style="background:#FFFFFF;border:1px solid #E3E3E3;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+<h2 style="margin:0;font-size:15px;font-weight:600;">juju-customers.csv</h2>
+<p style="margin:0;font-size:12px;color:#616161;">如果浏览器没有开始下载，可以从这里复制。</p>
+<pre style="margin:0;padding:12px;background:#F6F6F6;border-radius:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-x:auto;color:#303030;">{{csvPreview}}</pre>
+</section>
+</sc-if>
+</div>
+</sc-if>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = this.seed();
+  }
+
+  sizes(q) {
+    return ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'].map((l) => ({ label: l, qty: q[l] || 0 }));
+  }
+
+  blank(id, cid) {
+    return {
+      id: id, customerId: cid, sources: [], due: null,
+      invoice: '未开单', invoiceNo: '', pay: '未付款', payFrom: '', payNote: '',
+      supply: '未订料', arrival: '未收到', production: '未制作', delivery: '未寄出',
+      exception: false, issue: '', note: '', garments: [], prints: []
+    };
+  }
+
+  seed() {
+    const b = (id, cid, extra) => Object.assign(this.blank(id, cid), extra);
+    return {
+      screen: 'orders', selectedId: null, filter: 'all', nextNum: 1029,
+      paste: 'Leo（Ironbark Fitness）：你好，想给教练做一批卫衣，灰色，M 6 件，L 8 件，XL 4 件。后背印我们的 logo，大一点；左胸再印个小的。12 月 5 号前能做好吗？logo 文件我等下发你。',
+      pasteError: '', extracted: false, csvOpen: false, toast: '',
+      customers: [
+        { id: 'c1', company: 'Southside Scaffolding Ltd', name: 'Mere Tane', email: 'mere@southside.example.co.nz', phone: '+64 21 000 0142' },
+        { id: 'c2', company: '', name: '王磊', email: 'wanglei@example.com', phone: '+64 22 000 0381' },
+        { id: 'c3', company: 'Harbourview Café', name: 'Sam Patel', email: 'sam@harbourview.example.co.nz', phone: '' },
+        { id: 'c4', company: 'Eastside Tigers Rugby Club', name: 'Ana Fifita', email: 'ana@tigers.example.org.nz', phone: '+64 27 000 0975' }
+      ],
+      orders: [
+        b('JJ-1028', 'c1', {
+          sources: [{ ch: '微信', ref: '聊天粘贴 · 11/18' }, { ch: 'Xero', ref: 'INV-0465' }],
+          due: '2026-12-02', invoice: '已开单', invoiceNo: 'INV-0465', pay: '待核实', payFrom: 'Xero INV-0465',
+          payNote: '客户说已经转账，Xero 里还没对上账。',
+          garments: [{ style: 'Gildan 18000 圆领卫衣', color: '海军蓝', sizes: this.sizes({ M: 4, L: 6, XL: 2 }), mockup: 'JJ-1028_效果图_v1_确认.png',
+            logos: [{ pos: '左胸', w: '90', h: '40', process: '刺绣', file: 'southside-logo.ai' }] }]
+        }),
+        b('JJ-1027', 'c2', {
+          sources: [{ ch: 'Shopify', ref: '#1031' }],
+          due: '2026-11-21', pay: '已付款', payFrom: 'Shopify #1031',
+          supply: '已订料', arrival: '已收到', production: '已制作', delivery: '已寄出',
+          prints: [{ name: 'DTF 转印 gang sheet', qty: '1', size: '560 × 1000 mm', content: '客户上传的图案拼版', file: 'gangsheet-1031.png' }]
+        }),
+        b('JJ-1026', 'c3', {
+          sources: [{ ch: 'Gmail', ref: 'Staff aprons + menus' }],
+          garments: [{ style: null, color: '黑色', sizes: [{ label: '均码', qty: 8 }], mockup: null,
+            logos: [{ pos: '胸前', w: '120', h: '60', process: null, file: 'harbourview-logo.pdf' }] }],
+          prints: [{ name: 'A4 菜单', qty: '50', size: '210 × 297 mm', content: '双面彩印，正面菜单、背面 logo', file: null }]
+        }),
+        b('JJ-1025', 'c4', {
+          sources: [{ ch: '微信', ref: '聊天粘贴 · 11/10' }, { ch: 'Xero', ref: 'INV-0461' }],
+          due: '2026-11-30', invoice: '已开单', invoiceNo: 'INV-0461', pay: '部分付款', payFrom: 'Xero INV-0461',
+          supply: '已订料', arrival: '部分收到',
+          exception: true, issue: '供应商少发了 6 件黑色 XL。', note: '已补订，预计 11/26 到货；已告诉客户交期可能晚 2 天。',
+          garments: [{ style: 'Gildan 18500 连帽卫衣', color: '黑色', sizes: this.sizes({ S: 4, M: 10, L: 10, XL: 6 }), mockup: 'tigers_效果图_v3_确认.png',
+            logos: [{ pos: '前胸', w: '100', h: '100', process: '刺绣', file: 'tigers-crest.ai' },
+                    { pos: '左袖', w: null, h: null, process: '丝印', file: 'tigers-wordmark.ai' }] }]
+        }),
+        b('JJ-1024', 'c1', {
+          sources: [{ ch: 'Gmail', ref: 'Hi-vis polos for site crew' }, { ch: 'Xero', ref: 'INV-0457' }],
+          due: '2026-11-20', invoice: '已开单', invoiceNo: 'INV-0457', pay: '已付款', payFrom: 'Xero INV-0457',
+          supply: '已订料', arrival: '已收到', production: '已制作', delivery: '待客户自取',
+          garments: [{ style: 'R466X Work Guard 荧光 Polo', color: '荧光橙 / 海军蓝', sizes: this.sizes({ M: 8, L: 12, XL: 6, '2XL': 2 }), mockup: 'southside-polo_效果图_v2_确认.png',
+            logos: [{ pos: '左胸', w: '90', h: '45', process: 'DTF', file: 'southside-logo.ai' },
+                    { pos: '后背', w: '280', h: '120', process: 'DTF', file: 'southside-back.ai' }] }]
+        })
+      ],
+      inbox: [
+        { id: 'm1', ch: 'Gmail', time: '今天 09:12', from: 'mere@southside.example.co.nz', title: 'Re: Hi-vis polos for site crew',
+          summary: '“能再加 6 件 L 码吗？跟上次一样的 logo。”', tone: 'ok', match: '按邮箱匹配到 Southside Scaffolding Ltd',
+          question: '这封邮件在 JJ-1024 的邮件线程里。是加到原订单，还是开一张新单？' },
+        { id: 'm2', ch: 'Shopify', time: '今天 08:47', from: 'Shopify 订单 #1032', title: 'DTF 转印 gang sheet × 1（已付款）',
+          summary: '下单人 Wang Lei · wang.l@example.net · +64 22 000 0381', tone: 'warn', match: '电话匹配到客户「王磊」，但邮箱不一样',
+          question: '是同一个客户吗？' },
+        { id: 'm3', ch: 'Xero', time: '昨天 16:30', from: 'Xero 发票 INV-0466', title: '联系人：Harbourview Café',
+          summary: '发票的 Reference 里没有填订单号。', tone: 'warn', match: '这个客户有 1 张还没开单的订单：JJ-1026',
+          question: '把这张发票关联到 JJ-1026 吗？' }
+      ]
+    };
+  }
+
+  defs() {
+    return [
+      { key: 'invoice', label: '开单', options: ['未开单', '已开单'] },
+      { key: 'pay', label: '付款', options: ['未付款', '部分付款', '已付款', '待核实'], auto: true },
+      { key: 'supply', label: '供应商订料', options: ['未订料', '已订料'] },
+      { key: 'arrival', label: '材料到货', options: ['未收到', '部分收到', '已收到'] },
+      { key: 'production', label: '制作', options: ['未制作', '已制作'] },
+      { key: 'delivery', label: '交付', options: ['未寄出', '已寄出', '待客户自取', '已自取'] }
+    ];
+  }
+
+  tone(v) {
+    const done = ['已开单', '已付款', '已订料', '已收到', '已制作', '已寄出', '已自取'];
+    const mid = ['部分付款', '部分收到', '待客户自取'];
+    if (done.indexOf(v) >= 0) return 'background:#DDF3E4;color:#0B5A2A;';
+    if (mid.indexOf(v) >= 0) return 'background:#FFF0C2;color:#6B4E00;';
+    if (v === '待核实') return 'background:#FFE1D6;color:#8A2A0A;';
+    return 'background:#EDEDED;color:#474747;';
+  }
+
+  clone(x) { return JSON.parse(JSON.stringify(x)); }
+
+  cust(id) { return this.state.customers.find((c) => c.id === id); }
+
+  custLabel(c) { return c ? (c.company || c.name || '—') : '—'; }
+
+  pending(o) {
+    const p = [];
+    const c = this.cust(o.customerId);
+    if (c && !c.email && !c.phone) p.push('客户联系方式');
+    if (!o.due) p.push('交货日期');
+    o.garments.forEach((g, gi) => {
+      const n = '服装' + (gi + 1);
+      if (!g.style) p.push(n + ' 款式');
+      if (!g.color) p.push(n + ' 颜色');
+      if (!g.sizes.some((x) => Number(x.qty) > 0)) p.push(n + ' 尺码数量');
+      if (!g.mockup) p.push(n + ' 确认版效果图');
+      g.logos.forEach((l, li) => {
+        const m = n + ' Logo' + (li + 1);
+        if (!l.pos) p.push(m + ' 位置');
+        if (!l.w || !l.h) p.push(m + ' 尺寸');
+        if (!l.process) p.push(m + ' 工艺');
+        if (!l.file) p.push(m + ' 原档');
+      });
+    });
+    const names = { name: '品名', qty: '数量', size: '成品尺寸', content: '印刷内容', file: '文件' };
+    o.prints.forEach((x, i) => {
+      Object.keys(names).forEach((k) => { if (!x[k]) p.push('印刷品' + (i + 1) + ' ' + names[k]); });
+    });
+    return p;
+  }
+
+  patch(id, fn) {
+    this.setState((s) => ({
+      orders: s.orders.map((o) => {
+        if (o.id !== id) return o;
+        const n = this.clone(o);
+        fn(n);
+        return n;
+      })
+    }));
+  }
+
+  dismiss(mid) {
+    this.setState((s) => ({ inbox: s.inbox.filter((m) => m.id !== mid) }));
+  }
+
+  addToExisting() {
+    this.setState((s) => ({
+      inbox: s.inbox.filter((m) => m.id !== 'm1'),
+      orders: s.orders.map((o) => {
+        if (o.id !== 'JJ-1024') return o;
+        const n = this.clone(o);
+        n.sources.push({ ch: 'Gmail', ref: 'Re: 加 6 件 L 码' });
+        const L = n.garments[0].sizes.find((x) => x.label === 'L');
+        if (L) L.qty = (Number(L.qty) || 0) + 6;
+        return n;
+      }),
+      screen: 'detail', selectedId: 'JJ-1024',
+      toast: '已把 6 件 L 码加到 JJ-1024，并关联了这封邮件。原来的制作、交付状态没有动，请按实际情况改。'
+    }));
+  }
+
+  newFromThread() {
+    const s = this.state;
+    const id = 'JJ-' + s.nextNum;
+    const src = s.orders.find((o) => o.id === 'JJ-1024');
+    const g = this.clone(src.garments[0]);
+    g.sizes = g.sizes.map((x) => ({ label: x.label, qty: x.label === 'L' ? 6 : 0 }));
+    const o = Object.assign(this.blank(id, 'c1'), { sources: [{ ch: 'Gmail', ref: 'Re: 加 6 件 L 码' }], garments: [g] });
+    this.setState((st) => ({
+      inbox: st.inbox.filter((m) => m.id !== 'm1'),
+      orders: [o].concat(st.orders), nextNum: st.nextNum + 1,
+      screen: 'detail', selectedId: id,
+      toast: '已新建 ' + id + '，款式和 logo 从 JJ-1024 复制过来。交货日期待确认。'
+    }));
+  }
+
+  shopifyOrder(same) {
+    const s = this.state;
+    const id = 'JJ-' + s.nextNum;
+    const cid = same ? 'c2' : 'cn' + s.nextNum;
+    const o = Object.assign(this.blank(id, cid), {
+      sources: [{ ch: 'Shopify', ref: '#1032 · wang.l@example.net' }], pay: '已付款', payFrom: 'Shopify #1032',
+      prints: [{ name: 'DTF 转印 gang sheet', qty: '1', size: '560 × 1000 mm', content: '客户上传的图案拼版', file: 'gangsheet-1032.png' }]
+    });
+    this.setState((st) => ({
+      customers: same ? st.customers : st.customers.concat([{ id: cid, company: '', name: 'Wang Lei', email: 'wang.l@example.net', phone: '+64 22 000 0381' }]),
+      inbox: st.inbox.filter((m) => m.id !== 'm2'),
+      orders: [o].concat(st.orders), nextNum: st.nextNum + 1,
+      screen: 'detail', selectedId: id,
+      toast: same ? '已建 ' + id + '，归到客户「王磊」。新邮箱记在这张单的来源里。' : '已建 ' + id + '，并新建了客户 Wang Lei。'
+    }));
+  }
+
+  linkInvoice() {
+    this.setState((s) => ({
+      inbox: s.inbox.filter((m) => m.id !== 'm3'),
+      orders: s.orders.map((o) => {
+        if (o.id !== 'JJ-1026') return o;
+        const n = this.clone(o);
+        n.invoice = '已开单'; n.invoiceNo = 'INV-0466'; n.payFrom = 'Xero INV-0466';
+        n.sources.push({ ch: 'Xero', ref: 'INV-0466' });
+        return n;
+      }),
+      screen: 'detail', selectedId: 'JJ-1026',
+      toast: '已把 INV-0466 关联到 JJ-1026。以后这张单的付款状态会跟着 Xero 发票自动更新。'
+    }));
+  }
+
+  confirmPaste() {
+    const s = this.state;
+    const id = 'JJ-' + s.nextNum;
+    const cid = 'cn' + s.nextNum;
+    const o = Object.assign(this.blank(id, cid), {
+      sources: [{ ch: '微信', ref: '聊天粘贴 · 今天' }], due: '2026-12-05',
+      garments: [{ style: null, color: '灰色', sizes: this.sizes({ M: 6, L: 8, XL: 4 }), mockup: null,
+        logos: [{ pos: '后背', w: null, h: null, process: null, file: null }, { pos: '左胸', w: null, h: null, process: null, file: null }] }]
+    });
+    this.setState((st) => ({
+      customers: st.customers.concat([{ id: cid, company: 'Ironbark Fitness', name: 'Leo', email: '', phone: '' }]),
+      orders: [o].concat(st.orders), nextNum: st.nextNum + 1,
+      extracted: false, paste: '', screen: 'detail', selectedId: id,
+      toast: '已建单 ' + id + '，同时新建了客户 Ironbark Fitness。标「待确认」的字段补齐之前，这张单会一直出现在「有待确认」筛选里。'
+    }));
+  }
+
+  csvText() {
+    const esc = (v) => (/[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
+    const rows = [['公司名', '姓名', '邮箱', '电话']].concat(
+      this.state.customers.map((c) => [c.company || '', c.name || '', c.email || '', c.phone || ''])
+    );
+    return rows.map((r) => r.map(esc).join(',')).join('\r\n');
+  }
+
+  csvHref(text) {
+    if (this._csvText === text && this._csvUrl) return this._csvUrl;
+    try {
+      if (this._csvUrl) URL.revokeObjectURL(this._csvUrl);
+      this._csvUrl = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+    } catch (e) {
+      this._csvUrl = '#';
+    }
+    this._csvText = text;
+    return this._csvUrl;
+  }
+
+  detail(o, p, st) {
+    const self = this;
+    const c = this.cust(o.customerId) || {};
+    const patch = (fn) => self.patch(o.id, fn);
+    const val = (fn) => (e) => { const v = e.target.value; patch((n) => fn(n, v)); };
+
+    const garments = o.garments.map((g, gi) => {
+      const total = g.sizes.reduce((a, x) => a + (Number(x.qty) || 0), 0);
+      const logos = g.logos.map((l, li) => {
+        const sizeMissing = !l.w || !l.h;
+        return {
+          idx: li + 1,
+          pos: l.pos || '', posInput: st.inputStyle(!l.pos),
+          setPos: val((n, v) => { n.garments[gi].logos[li].pos = v || null; }),
+          w: l.w || '', h: l.h || '', wInput: st.inputStyle(!l.w), hInput: st.inputStyle(!l.h),
+          setW: val((n, v) => { n.garments[gi].logos[li].w = v || null; }),
+          setH: val((n, v) => { n.garments[gi].logos[li].h = v || null; }),
+          procs: ['DTF', '刺绣', '丝印'].map((pr) => ({
+            label: pr, pressed: String(l.process === pr), style: st.chipBtn(l.process === pr),
+            pick: () => patch((n) => { n.garments[gi].logos[li].process = pr; })
+          })),
+          processMissing: !l.process,
+          file: l.file || '', fileKnown: !!l.file, fileMissing: !l.file,
+          anyMissing: !l.pos || sizeMissing || !l.process || !l.file
+        };
+      });
+      return {
+        title: '服装 ' + (gi + 1), total: String(total),
+        style: g.style || '', styleMissing: !g.style, styleInput: st.inputStyle(!g.style),
+        setStyle: val((n, v) => { n.garments[gi].style = v || null; }),
+        color: g.color || '', colorMissing: !g.color, colorInput: st.inputStyle(!g.color),
+        setColor: val((n, v) => { n.garments[gi].color = v || null; }),
+        sizesMissing: total === 0,
+        sizes: g.sizes.map((x, si) => ({
+          label: x.label, qty: String(x.qty),
+          set: val((n, v) => { n.garments[gi].sizes[si].qty = Math.max(0, parseInt(v, 10) || 0); })
+        })),
+        logos: logos,
+        mockup: g.mockup || '', mockupKnown: !!g.mockup, mockupMissing: !g.mockup
+      };
+    });
+
+    const pf = [['name', '品名'], ['qty', '数量'], ['size', '成品尺寸'], ['content', '印刷内容']];
+    const prints = o.prints.map((x, i) => ({
+      title: '印刷品 ' + (i + 1),
+      fields: pf.map((f) => ({
+        label: f[1], value: x[f[0]] || '', missing: !x[f[0]], inputStyle: st.inputStyle(!x[f[0]]),
+        set: val((n, v) => { n.prints[i][f[0]] = v || null; })
+      })),
+      file: x.file || '', fileKnown: !!x.file, fileMissing: !x.file
+    }));
+
+    const statusRows = this.defs().map((df) => {
+      const v = o[df.key];
+      const auto = !!df.auto;
+      let autoNote = '';
+      if (auto) {
+        autoNote = o.payFrom
+          ? '从 ' + o.payFrom + ' 自动同步。' + (v === '待核实' ? (o.payNote || '金额对不上，需要人工核对。') : '')
+          : '还没关联 Xero 发票或 Shopify 订单，关联后自动同步。';
+      }
+      return {
+        label: df.label, value: v, pillStyle: st.PILL + this.tone(v),
+        auto: auto, manual: !auto, autoNote: autoNote,
+        showInvoiceNo: df.key === 'invoice' && v === '已开单',
+        opts: df.options.map((op) => ({
+          label: op, pressed: String(op === v), style: st.chipBtn(op === v),
+          pick: () => patch((n) => { n[df.key] = op; })
+        }))
+      };
+    });
+
+    return {
+      id: o.id,
+      custTitle: this.custLabel(c), showPerson: !!(c.company && c.name), person: c.name || '',
+      email: c.email || '', emailKnown: !!c.email, phone: c.phone || '', phoneKnown: !!c.phone,
+      contactMissing: !c.email && !c.phone,
+      pendingItems: p.map((t) => ({ t: t })), pendingCount: String(p.length), hasPending: p.length > 0,
+      garments: garments, prints: prints, statusRows: statusRows,
+      sources: o.sources,
+      due: o.due || '', dueMissing: !o.due, dueInput: st.inputStyle(!o.due),
+      setDue: val((n, v) => { n.due = v || null; }),
+      invoiceNo: o.invoiceNo || '', setInvoiceNo: val((n, v) => { n.invoiceNo = v; }),
+      exception: !!o.exception,
+      toggleException: (e) => { const on = e.target.checked; patch((n) => { n.exception = on; }); },
+      issue: o.issue || '', setIssue: val((n, v) => { n.issue = v; }),
+      note: o.note || '', setNote: val((n, v) => { n.note = v; })
+    };
+  }
+
+  renderVals() {
+    const self = this;
+    const s = this.state;
+    const PILL = 'display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;line-height:18px;white-space:nowrap;';
+    const navStyle = (on) => 'min-height:44px;padding:0 14px;border-radius:8px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;' +
+      (on ? 'border:1px solid #303030;background:#303030;color:#FFFFFF;' : 'border:1px solid #D4D4D4;background:#FFFFFF;color:#303030;');
+    const chipBtn = (on) => 'min-height:44px;padding:0 12px;border-radius:8px;font-size:13px;' +
+      (on ? 'border:1px solid #303030;background:#303030;color:#FFFFFF;font-weight:500;' : 'border:1px solid #D4D4D4;background:#FFFFFF;color:#303030;');
+    const inputStyle = (missing) => 'width:100%;box-sizing:border-box;min-height:40px;padding:8px 10px;border-radius:8px;font-size:14px;color:#303030;' +
+      (missing ? 'border:1px solid #C98A00;background:#FFFBEF;' : 'border:1px solid #C9C9C9;background:#FFFFFF;');
+    const btn = (primary) => 'min-height:44px;padding:0 16px;border-radius:8px;font-size:14px;font-weight:500;' +
+      (primary ? 'border:1px solid #1A1A1A;background:#303030;color:#FFFFFF;' : 'border:1px solid #C9C9C9;background:#FFFFFF;color:#303030;');
+    const go = (screen) => () => self.setState({ screen: screen, csvOpen: false, toast: '' });
+
+    const orders = s.orders;
+    const pend = {};
+    orders.forEach((o) => { pend[o.id] = self.pending(o); });
+    const isOpen = (o) => o.delivery !== '已寄出' && o.delivery !== '已自取';
+    const fdefs = [
+      { key: 'all', label: '全部', test: () => true },
+      { key: 'open', label: '未完成交付', test: isOpen },
+      { key: 'pending', label: '有待确认', test: (o) => pend[o.id].length > 0 },
+      { key: 'exception', label: '有异常', test: (o) => !!o.exception }
+    ];
+    const active = fdefs.find((f) => f.key === s.filter) || fdefs[0];
+    const filters = fdefs.map((f) => ({
+      label: f.label, count: String(orders.filter(f.test).length),
+      pressed: String(f.key === active.key), style: chipBtn(f.key === active.key),
+      pick: () => self.setState({ filter: f.key })
+    }));
+    const rows = orders.filter(active.test).map((o) => {
+      const c = self.cust(o.customerId) || {};
+      const p = pend[o.id];
+      return {
+        id: o.id,
+        open: () => self.setState({ screen: 'detail', selectedId: o.id, toast: '' }),
+        customer: self.custLabel(c),
+        contact: c.email || c.phone || '联系方式待确认',
+        sources: o.sources.map((x) => ({ ch: x.ch })),
+        due: o.due || '', dueMissing: !o.due, dueKnown: !!o.due,
+        statuses: self.defs().map((df) => ({ text: o[df.key], style: PILL + self.tone(o[df.key]) })),
+        exception: !!o.exception, hasPending: p.length > 0, pendingCount: String(p.length)
+      };
+    });
+
+    const sel = orders.find((o) => o.id === s.selectedId) || orders[0];
+    const d = self.detail(sel, pend[sel.id] || [], { PILL: PILL, chipBtn: chipBtn, inputStyle: inputStyle });
+
+    const acts = {
+      m1: [['加到 JJ-1024', true, () => self.addToExisting()], ['开新单', false, () => self.newFromThread()], ['忽略', false, () => self.dismiss('m1')]],
+      m2: [['是同一客户', true, () => self.shopifyOrder(true)], ['新建客户', false, () => self.shopifyOrder(false)], ['忽略', false, () => self.dismiss('m2')]],
+      m3: [['关联到 JJ-1026', true, () => self.linkInvoice()], ['忽略', false, () => self.dismiss('m3')]]
+    };
+    const inboxCards = s.inbox.map((m) => Object.assign({}, m, {
+      matchStyle: 'font-size:13px;border-radius:8px;padding:8px 10px;line-height:1.5;' +
+        (m.tone === 'ok' ? 'color:#0B5A2A;background:#DDF3E4;' : 'color:#7A4A00;background:#FFF8E6;'),
+      actions: (acts[m.id] || []).map((a) => ({ label: a[0], style: btn(a[1]), run: a[2] }))
+    }));
+
+    const exRows = [
+      { label: '客户', value: 'Leo · Ironbark Fitness（新客户）', missing: false },
+      { label: '联系方式', value: '聊天里没有邮箱和电话', missing: true },
+      { label: '款式', value: '卫衣，没说具体型号', missing: true },
+      { label: '颜色', value: '灰色', missing: false },
+      { label: '尺码数量', value: 'M 6 · L 8 · XL 4（共 18 件）', missing: false },
+      { label: 'Logo 1', value: '后背，「大一点」，没有尺寸和工艺', missing: true },
+      { label: 'Logo 2', value: '左胸，「小的」，没有尺寸和工艺', missing: true },
+      { label: 'Logo 原档', value: '客户说等下发', missing: true },
+      { label: '交货日期', value: '2026-12-05', missing: false }
+    ];
+
+    const custRows = s.customers.map((c) => ({
+      company: c.company || '—', name: c.name || '—', email: c.email || '—', phone: c.phone || '—',
+      count: String(orders.filter((o) => o.customerId === c.id).length)
+    }));
+    const csv = self.csvText();
+    const onOrders = s.screen === 'orders' || s.screen === 'detail';
+
+    return {
+      isOrders: s.screen === 'orders', isDetail: s.screen === 'detail',
+      isInbox: s.screen === 'inbox', isCustomers: s.screen === 'customers',
+      goOrders: go('orders'), goInbox: go('inbox'), goCustomers: go('customers'),
+      navOrders: { style: navStyle(onOrders), current: onOrders ? 'page' : 'false' },
+      navInbox: { style: navStyle(s.screen === 'inbox'), current: s.screen === 'inbox' ? 'page' : 'false' },
+      navCustomers: { style: navStyle(s.screen === 'customers'), current: s.screen === 'customers' ? 'page' : 'false' },
+      inboxBadge: String(s.inbox.length), hasInbox: s.inbox.length > 0,
+      filters: filters, rows: rows, noRows: rows.length === 0,
+      d: d, toast: s.toast, hasToast: !!s.toast,
+      paste: s.paste,
+      setPaste: (e) => { const v = e.target.value; self.setState({ paste: v, pasteError: '' }); },
+      extract: () => {
+        if (!String(self.state.paste || '').trim()) self.setState({ pasteError: '先粘贴聊天内容。', extracted: false });
+        else self.setState({ extracted: true, pasteError: '' });
+      },
+      pasteError: s.pasteError, hasPasteError: !!s.pasteError,
+      extracted: s.extracted, exRows: exRows,
+      confirmPaste: () => self.confirmPaste(),
+      cancelExtract: () => self.setState({ extracted: false }),
+      inboxCards: inboxCards, inboxCount: String(s.inbox.length), inboxEmpty: s.inbox.length === 0,
+      custRows: custRows, csvUrl: self.csvHref(csv), csvPreview: csv,
+      csvOpen: s.csvOpen, showCsv: () => self.setState({ csvOpen: true })
+    };
+  }
+}
+</script>
+</body>
+</html>
